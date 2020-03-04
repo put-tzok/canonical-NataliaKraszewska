@@ -19,8 +19,19 @@ class DotBracket:
 
     @staticmethod
     def from_string(sequence, structure):
-        # TODO: implement this
         pairs = []
+        op_bracket = ['(', '[', '{', '<', 'A']
+        cl_bracket = [')', ']', '}', '>', 'a']
+        tmp_structure = list(structure)
+        for index, sign in enumerate(structure):
+            tmp_cl_index = 0
+            if sign in op_bracket:
+                for index_2, sign_2 in enumerate(tmp_structure):
+                        if sign_2 == cl_bracket[op_bracket.index(sign)]:
+                            tmp_cl_index = index_2
+                pairs.append((index, tmp_cl_index))
+                tmp_structure[tmp_cl_index] = '?'
+                
         return DotBracket(sequence, structure, pairs)
 
     def __init__(self, sequence, structure, pairs):
@@ -36,8 +47,17 @@ class DotBracket:
             BPSEQ:      An instance of BPSEQ object created from this object.
         :return:
         '''
-        # TODO: implement this
         entries = []
+        for index, sign in enumerate(self.sequence):
+            if self.structure[index]!= ".":
+                for x, y in self.pairs:
+                    if index == x:
+                        entries.append((index + 1, sign, y + 1))
+                    elif index == y:
+                        entries.append((index + 1, sign, x + 1))
+            else:
+                entries.append((index + 1, sign, 0))
+
         return BPSEQ(entries)
 
 
@@ -89,6 +109,7 @@ def generate_test_function(json_path):
             data = json.load(json_file)
         sequence = ''.join(data['dbn']['all_chains']['bseq'].split('&'))
         structure = ''.join(data['dbn']['all_chains']['sstr'].split('&'))
+
         dot_bracket = DotBracket.from_string(sequence, structure)
         bpseq1 = dot_bracket.to_bpseq()
 
@@ -102,6 +123,6 @@ def generate_test_function(json_path):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    for json_path in glob.iglob('data/????.json'):
+    for json_path in glob.iglob('data/3k1v.json'):
         suite.addTest(unittest.FunctionTestCase(generate_test_function(json_path)))
     unittest.TextTestRunner().run(suite)
