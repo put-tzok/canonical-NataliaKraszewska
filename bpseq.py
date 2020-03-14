@@ -17,20 +17,27 @@ class DotBracket:
         pairs (list):       A list of pairs e.g. [(0, 120), (1, 119), ...] parsed from `structure` attribute.
     '''
 
+
+
     @staticmethod
     def from_string(sequence, structure):
         pairs = []
-        op_bracket = ['(', '[', '{', '<', 'A']
-        cl_bracket = [')', ']', '}', '>', 'a']
+        op_bracket = ['(', '[', '{', '<']
+        cl_bracket = [')', ']', '}', '>']
         tmp_structure = list(structure)
-        for index, sign in enumerate(structure):
-            tmp_cl_index = 0
-            if sign in op_bracket:
-                for index_2, sign_2 in enumerate(tmp_structure):
-                        if sign_2 == cl_bracket[op_bracket.index(sign)]:
-                            tmp_cl_index = index_2
-                pairs.append((index, tmp_cl_index))
-                tmp_structure[tmp_cl_index] = '?'
+        for _ in enumerate(structure):
+            last_open_bracket_position = find_last_open_bracket(tmp_structure)
+            if last_open_bracket_position == -1:
+                return DotBracket(sequence, structure, pairs)
+            tmp_structure[last_open_bracket_position] = '-'
+            found = False
+            for index_2, sign_2 in enumerate(tmp_structure):
+                if not found:
+                    if index_2 > last_open_bracket_position:
+                        if sign_2 == cl_bracket[op_bracket.index(structure[last_open_bracket_position])]:
+                            pairs.append((last_open_bracket_position, index_2) )
+                            tmp_structure[index_2] = '-'
+                            found = True
                 
         return DotBracket(sequence, structure, pairs)
 
@@ -49,7 +56,7 @@ class DotBracket:
         '''
         entries = []
         for index, sign in enumerate(self.sequence):
-            if self.structure[index]!= ".":
+            if self.structure[index] != "." and self.structure[index] != "a" and self.structure[index] != "A":
                 for x, y in self.pairs:
                     if index == x:
                         entries.append((index + 1, sign, y + 1))
@@ -59,6 +66,16 @@ class DotBracket:
                 entries.append((index + 1, sign, 0))
 
         return BPSEQ(entries)
+
+
+
+def find_last_open_bracket(structure):
+    op_bracket = ['(', '[', '{', '<']
+    position = -1
+    for index, bracket in enumerate(structure):
+        if bracket in op_bracket:
+            position = index
+    return position
 
 
 class BPSEQ:
@@ -115,6 +132,7 @@ def generate_test_function(json_path):
 
         bpseq_path = json_path.replace('.json', '.bpseq')
         bpseq2 = BPSEQ.from_file(bpseq_path)
+
         assert bpseq1 == bpseq2
 
     test_function.__name__ = 'test_{}'.format(os.path.basename(json_path))
@@ -123,6 +141,6 @@ def generate_test_function(json_path):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    for json_path in glob.iglob('data/3k1v.json'):
+    for json_path in glob.iglob('data/????.json'):
         suite.addTest(unittest.FunctionTestCase(generate_test_function(json_path)))
     unittest.TextTestRunner().run(suite)
