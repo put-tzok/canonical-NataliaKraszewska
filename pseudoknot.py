@@ -87,6 +87,13 @@ class Stem:
             bool:           Status of the pseudoknot relation.
         '''
         # TODO: implement this (change the False below to a meaningful expression)
+        i = self.strand1.begin
+        j = self.strand2.begin
+        k = other.strand1.begin
+        l = other.strand2.begin
+
+        if i < k < j < l or k < i < l < j:
+            return True
         return False
 
 
@@ -219,7 +226,31 @@ class BPSEQ:
             list:       A list of Stem objects.
         '''
         # TODO: implement this
+        
         stems = []
+        strand1_start = 0
+        strand1_end = 0
+        strand2_start = 0
+        strand2_end = 0
+        seq = get_seq(self.entries)
+
+        for i in range(len(self.entries) - 1):
+            if self.entries[i][0] < self.entries[i][2]:
+                if self.entries[i][0] + 1 == self.entries[i + 1][0] and self.entries[i][2] - 1 == self.entries[i + 1][2]:
+                    if (not strand1_start and not strand2_end):
+                        strand1_start = self.entries[i][0]
+                        strand2_end = self.entries[i][2] 
+                    strand1_end = self.entries[i][0] + 1
+                    strand2_start = self.entries[i][2] - 1
+                elif strand1_end and strand2_end:
+                    strand1 = Strand(strand1_start, strand1_end, ''.join(seq[strand1_start -1: strand1_end]))
+                    strand2 = Strand(strand2_end, strand2_start, ''.join(seq[strand2_start: strand2_end + 1])[::-1])
+                    stems.append(Stem(strand1, strand2))
+                    strand1_start = 0
+                    strand1_end = 0
+                    strand2_start = 0
+                    strand2_end = 0
+
         return stems
 
     def hairpins(self) -> List[Hairpin]:
@@ -229,9 +260,24 @@ class BPSEQ:
         Returns:
             list:       A list of Hairpin objects.
         '''
-        # TODO: implement this
         hairpins = []
+        first_pair = []
+        seq = get_seq(self.entries)
+
+        for i in range(1, len(self.entries) - 1):
+            if self.entries[i][2] == 0:
+                if not len(first_pair):
+                    first_pair.append((self.entries[i-1][0], self.entries[i-1][2]))
+            else:
+                if len(first_pair):
+                    if self.entries[i][0] == first_pair[0][1] and self.entries[i][2] == first_pair[0][0]:
+                        sequence = ''.join(seq[first_pair[0][0] - 1:first_pair[0][1]])
+                        hairpins.append(Hairpin(first_pair[0][0], first_pair[0][1], sequence))
+                    sequence = []
+                first_pair = []
+
         return hairpins
+
 
     def pseudoknots(self) -> List[Pseudoknot]:
         '''
@@ -245,6 +291,13 @@ class BPSEQ:
             if stem1.forms_pseudoknot_with(stem2):
                 pseudoknots.append(Pseudoknot(stem1, stem2))
         return pseudoknots
+
+
+def get_seq(entries):
+    seq = []
+    for i in range(len(entries)):
+        seq.append(entries[i][1])
+    return seq
 
 
 def generate_test_function(bpseq_path):
@@ -283,7 +336,7 @@ def generate_test_function(bpseq_path):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    for bpseq_path in glob.iglob('data/*.bpseq'):
+    for bpseq_path in glob.iglob('data/1drz.bpseq'):
         for test_function in generate_test_function(bpseq_path):
             suite.addTest(unittest.FunctionTestCase(test_function))
     unittest.TextTestRunner().run(suite)
